@@ -61,7 +61,7 @@ void sendData(String nodeName, String date, float distance, int lightRaw, bool l
 
     String query = "node_name=" + nodeName + "&time_received=" + date + "&distance=" + String(distance) + "&light_raw=" + String(lightRaw) + "&light_on=" + String(lightOn);
     String encodedQuery = base64::encode(query);  // Use this if you want Base64 encoding
-    String fullURL = uploadURL + encodedQuery;    // Use this for unencoded query
+    String fullURL = uploadURL + query;    // Use this for unencoded query
     Serial.println("Sending data: " + fullURL);
     
     if(https.begin(client, fullURL)) {
@@ -119,6 +119,10 @@ void checkSwitches() {
 
 // Get current date in dateTime format using TimeAPI
 String getDateFromTimezone(String timezone) {
+  while(WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected, trying again in 30s");
+    delay(30000); // Wait for 30 seconds before retrying
+  }
   if(WiFi.status() == WL_CONNECTED) {
     WiFiClientSecure client;
     client.setInsecure(); // Disable SSL certificate verification
