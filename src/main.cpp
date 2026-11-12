@@ -33,10 +33,10 @@ void setup() {
   setupDataSensors();
   wifiConnect();
   getTimezone();
-  delay(READ_DELAY); // Sleep for 1 second
+  delay(READ_DELAY); // Sleep for 0.25 second
 }
 
 void loop() {
   checkSwitches();
-  delay(READ_DELAY); // Sleep for 1 second
+  delay(READ_DELAY); // Sleep for 0.25 second
 }

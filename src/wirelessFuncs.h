@@ -3,6 +3,7 @@
 #include <ESP8266HTTPClient.h>
 #include <cmath>
 #include <ArduinoJson.h>
+#include <base64.h>
 
 #include <private_credentials.h>
 #include <controlSensors.h>
@@ -31,6 +32,11 @@ WiFiClient client;
 String uploadURL = "https://lucasloughner.site/upload_sensor_data_lightdistance.php?";
 String uploadData = "";
 
+String successfulResponse = "DATA UPLOAD SUCCESSFUL";
+String timeReceivedResponse = "TIME RECEIVED ALREADY EXISTS.";
+
+String testDate = "2025-12-08%2012:00:32"; // Placeholder date
+
 void wifiConnect() {
   WiFi.begin(SSID, PW);
   while (WiFi.status() != WL_CONNECTED) {
@@ -41,37 +47,38 @@ void wifiConnect() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  Serial.printf("Signal Strength (RSSI): %ld dBm\n", WiFi.RSSI());
+  Serial.printf("Signal Strength (RSSI): %d dBm\n", WiFi.RSSI());
 }
 
 void sendData(String nodeName, String date, float distance, int lightRaw, bool lightOn) {
+  while(WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi not connected, trying again in 30s");
+  }
   if(WiFi.status() == WL_CONNECTED) {
     WiFiClientSecure client;
     client.setInsecure(); // Disable SSL certificate verification
     HTTPClient https;
 
-    String fullURL = uploadURL + "node_name=" + nodeName + "&time_received=" + date + "&distance=" + String(distance) + "&light_raw=" + String(lightRaw) + "&light_on=" + String(lightOn);
+    String query = "node_name=" + nodeName + "&time_received=" + date + "&distance=" + String(distance) + "&light_raw=" + String(lightRaw) + "&light_on=" + String(lightOn);
+    String encodedQuery = base64::encode(query);  // Use this if you want Base64 encoding
+    String fullURL = uploadURL + encodedQuery;    // Use this for unencoded query
     Serial.println("Sending data: " + fullURL);
     
     if(https.begin(client, fullURL)) {
         int httpCode = https.GET();
 
         Serial.println("Response Code: <--- " + String(httpCode));
-        while(httpCode <= 0) {
+        String payload = https.getString();
+        while(httpCode != 200 || (payload != successfulResponse && payload != timeReceivedResponse)) {
           Serial.println("Error on HTTP request, retrying in 30s...");
+          Serial.println("Response Payload: <--- " + payload);
           delay(30000); // Wait for 30 seconds before retrying
           httpCode = https.GET();
           Serial.println("Response Code: <--- " + String(httpCode));
         }
-        String payload = https.getString();
+        
         Serial.println("Response Payload: <--- " + payload);
 
-        // if(httpCode > 0) {
-        //     String payload = https.getString();
-        //     Serial.println("Response Payload: <--- " + payload);
-        // } else {
-        //     Serial.println("Error on HTTP request");
-        // }
         https.end();
     }
 
@@ -91,7 +98,8 @@ void checkSwitches() {
     Serial.println("Button Pressed");
     upload = true;
     nodeName = "node_1";
-  } else if(tiltSwitchState == LOW && prevTiltSwitchState == HIGH) {
+  } 
+  if(tiltSwitchState == LOW && prevTiltSwitchState == HIGH) {
     Serial.println("Tilt Switch Activated");
     upload = true;
     nodeName = "node_2";
@@ -120,7 +128,6 @@ String getDateFromTimezone(String timezone) {
     if(https.begin(client, apiURL)) {
         int httpCode = https.GET();
 
-        Serial.println("Response Code: <--- " + String(httpCode));
         if(httpCode > 0) {
           // Successful response, parse JSON
           String payload = https.getString();

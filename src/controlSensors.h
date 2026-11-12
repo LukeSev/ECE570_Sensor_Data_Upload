@@ -14,6 +14,9 @@ int prevTiltSwitchState = HIGH;
 void setupControlSensors() {
   pinMode(buttonPin, INPUT_PULLUP);     // Set button pin as input with internal pull-up resistor
   pinMode(tiltSwitchPin, INPUT_PULLUP); // Set tilt switch pin as input with internal pull-up resistor
+
+  prevButtonState = digitalRead(buttonPin); // Get initial button state
+  prevTiltSwitchState = digitalRead(tiltSwitchPin); // Get initial tilt switch state
 }
 
 // Read button state, returns HIGH if not pressed, LOW if pressed
